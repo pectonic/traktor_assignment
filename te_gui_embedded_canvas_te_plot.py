@@ -16,39 +16,39 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolb
 
 # ------------------ PDF formülleri ------------------
 
-def chi(i, Cn):
+def chi_degeri(patinaj_orani, cn_degeri):
     """chi(i) = 0.75 * (1 - exp(-0.3 * Cn * i))"""
-    return 0.75 * (1.0 - math.exp(-0.3 * Cn * i))
+    return 0.75 * (1.0 - math.exp(-0.3 * cn_degeri * patinaj_orani))
 
 
-def rho(Cn):
+def ro_degeri(cn_degeri):
     """rho(Cn) = 1.2/Cn + 0.04"""
-    return 1.2 / Cn + 0.04
+    return 1.2 / cn_degeri + 0.04
 
 
-def TE_of(i, Cn):
+def te_degeri(patinaj_orani, cn_degeri):
     """TE(i) = (1 - i) * (1 - rho/chi)  (mu = chi varsayımı ile)"""
-    c = chi(i, Cn)
-    if c <= 1e-15:
+    chi_sonuclari = chi_degeri(patinaj_orani, cn_degeri)
+    if chi_sonuclari <= 1e-15:
         return float("-inf")
-    return (1.0 - i) * (1.0 - rho(Cn) / c)
+    return (1.0 - patinaj_orani) * (1.0 - ro_degeri(cn_degeri) / chi_sonuclari)
 
 
 # --- TE_max'ı sayısal tarama ile bul ---
-I_MIN, I_MAX = 1e-6, 0.90
+I_EN_AZ, I_EN_COK = 1e-6, 0.90
 
 
-def find_te_max(Cn, steps=4000):
-    xs = np.linspace(I_MIN, I_MAX, steps)
-    tes = np.array([TE_of(x, Cn) for x in xs])
-    k = int(np.argmax(tes))
-    return float(xs[k]), float(tes[k])
+def te_maksimumunu_bul(cn_degeri, adim_sayisi=4000):
+    patinaj_dizisi = np.linspace(I_EN_AZ, I_EN_COK, adim_sayisi)
+    te_degerleri = np.array([te_degeri(patinaj, cn_degeri) for patinaj in patinaj_dizisi])
+    en_yuksek_indis = int(np.argmax(te_degerleri))
+    return float(patinaj_dizisi[en_yuksek_indis]), float(te_degerleri[en_yuksek_indis])
 
 
 # ------------------ GUI ------------------
 
 
-class App(tk.Tk):
+class Uygulama(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("TE → Slip (i) ve TE(i) Eğrileri (Gömülü Canvas)")
@@ -56,56 +56,56 @@ class App(tk.Tk):
         self.minsize(900, 650)
         self.resizable(True, True)
 
-        self.style_bad = "#ffd6d6"
-        self.style_ok = "white"
+        self.stil_kotu = "#ffd6d6"
+        self.stil_iyi = "white"
 
         # Notebook (2 sayfa)
-        self.nb = ttk.Notebook(self)
-        self.page1 = ttk.Frame(self.nb)
-        self.page2 = ttk.Frame(self.nb)
-        self.nb.add(self.page1, text="1) Girdi")
-        self.nb.add(self.page2, text="2) TE Grafiği")
-        self.nb.pack(fill="both", expand=True)
+        self.defter = ttk.Notebook(self)
+        self.sayfa1 = ttk.Frame(self.defter)
+        self.sayfa2 = ttk.Frame(self.defter)
+        self.defter.add(self.sayfa1, text="1) Girdi")
+        self.defter.add(self.sayfa2, text="2) TE Grafiği")
+        self.defter.pack(fill="both", expand=True)
 
-        self._build_page1()
-        self._build_page2()
+        self._sayfa1_olustur()
+        self._sayfa2_olustur()
 
         # Varsayılan: 2. sayfa kilitli
-        self.nb.tab(1, state="disabled")
+        self.defter.tab(1, state="disabled")
 
     # ------------------ 1. Sayfa ------------------
-    def _build_page1(self):
-        pad = {"padx": 10, "pady": 8}
+    def _sayfa1_olustur(self):
+        bosluk = {"padx": 10, "pady": 8}
 
-        ttk.Label(self.page1, text="Hedef TE (0–1):").grid(row=0, column=0, sticky="e", **pad)
-        self.te_var = tk.StringVar(value="0.60")
-        self.te_entry = ttk.Entry(self.page1, width=12, textvariable=self.te_var)
-        self.te_entry.grid(row=0, column=1, sticky="w", **pad)
+        ttk.Label(self.sayfa1, text="Hedef TE (0–1):").grid(row=0, column=0, sticky="e", **bosluk)
+        self.te_degiskeni = tk.StringVar(value="0.60")
+        self.te_girdisi = ttk.Entry(self.sayfa1, width=12, textvariable=self.te_degiskeni)
+        self.te_girdisi.grid(row=0, column=1, sticky="w", **bosluk)
 
-        ttk.Label(self.page1, text="Cn:").grid(row=1, column=0, sticky="e", **pad)
-        self.cn_var = tk.StringVar(value="40")
-        self.cn_entry = ttk.Entry(self.page1, width=12, textvariable=self.cn_var)
-        self.cn_entry.grid(row=1, column=1, sticky="w", **pad)
+        ttk.Label(self.sayfa1, text="Cn:").grid(row=1, column=0, sticky="e", **bosluk)
+        self.cn_degiskeni = tk.StringVar(value="40")
+        self.cn_girdisi = ttk.Entry(self.sayfa1, width=12, textvariable=self.cn_degiskeni)
+        self.cn_girdisi.grid(row=1, column=1, sticky="w", **bosluk)
 
-        self.info_lbl = ttk.Label(
-            self.page1,
+        self.bilgi_etiketi = ttk.Label(
+            self.sayfa1,
             text="TEmax ve uygunluk durumunu görmek için 'Hesapla'ya basın."
         )
-        self.info_lbl.grid(row=2, column=0, columnspan=3, sticky="w", **pad)
+        self.bilgi_etiketi.grid(row=2, column=0, columnspan=3, sticky="w", **bosluk)
 
-        self.calc_btn = ttk.Button(self.page1, text="Hesapla", command=self.on_calculate)
-        self.calc_btn.grid(row=3, column=1, sticky="w", **pad)
+        self.hesapla_butonu = ttk.Button(self.sayfa1, text="Hesapla", command=self.hesapla)
+        self.hesapla_butonu.grid(row=3, column=1, sticky="w", **bosluk)
 
-        for col in range(3):
-            self.page1.grid_columnconfigure(col, weight=1)
+        for sutun in range(3):
+            self.sayfa1.grid_columnconfigure(sutun, weight=1)
 
         # Kullanılan formüller ve semboller
-        formulas_frame = ttk.LabelFrame(self.page1, text="Kullanılan formüller ve semboller")
-        formulas_frame.grid(row=4, column=0, columnspan=3, sticky="nsew", padx=10, pady=(4, 10))
-        formulas_frame.columnconfigure(0, weight=1)
-        self.page1.grid_rowconfigure(4, weight=1)
+        formuller_cercevesi = ttk.LabelFrame(self.sayfa1, text="Kullanılan formüller ve semboller")
+        formuller_cercevesi.grid(row=4, column=0, columnspan=3, sticky="nsew", padx=10, pady=(4, 10))
+        formuller_cercevesi.columnconfigure(0, weight=1)
+        self.sayfa1.grid_rowconfigure(4, weight=1)
 
-        formulas_text = (
+        formuller_metni = (
             "Wismer ve Luth Eşitlikleri (1974)\n"
             "\n"
             "Tekerlek yuvarlanma direnci katsayısı:\n"
@@ -133,208 +133,223 @@ class App(tk.Tk):
             "  ρ : Yuvarlanma direnci katsayısı, μ : Çevre kuvveti katsayısı, χ : TE hesabında kullanılan katsayı\n"
         )
 
-        formulas_box = scrolledtext.ScrolledText(
-            formulas_frame,
+        formuller_kutusu = scrolledtext.ScrolledText(
+            formuller_cercevesi,
             wrap=tk.WORD,
             height=15,
             font=("TkDefaultFont", 10),
         )
-        formulas_box.insert("1.0", formulas_text)
-        formulas_box.configure(state="disabled")
-        formulas_box.grid(row=0, column=0, sticky="nsew", padx=10, pady=8)
+        formuller_kutusu.insert("1.0", formuller_metni)
+        formuller_kutusu.configure(state="disabled")
+        formuller_kutusu.grid(row=0, column=0, sticky="nsew", padx=10, pady=8)
 
-        self.te_var.trace_add("write", lambda *_: self._reset_info())
-        self.cn_var.trace_add("write", lambda *_: self._reset_info())
+        self.te_degiskeni.trace_add("write", lambda *_: self._bilgi_sifirla())
+        self.cn_degiskeni.trace_add("write", lambda *_: self._bilgi_sifirla())
 
-    def _reset_info(self):
-        self.info_lbl.config(text="TEmax ve uygunluk durumunu görmek için 'Hesapla'ya basın.")
-        self.te_entry.configure(background=self.style_ok)
-        self.nb.tab(1, state="disabled")
+    def _bilgi_sifirla(self):
+        self.bilgi_etiketi.config(text="TEmax ve uygunluk durumunu görmek için 'Hesapla'ya basın.")
+        self.te_girdisi.configure(background=self.stil_iyi)
+        self.defter.tab(1, state="disabled")
 
-    def _parse_float(self, s):
-        return float(s.strip().replace(",", "."))
+    def _ondalik_coz(self, metin):
+        return float(metin.strip().replace(",", "."))
 
-    def on_calculate(self):
+    def hesapla(self):
         try:
-            TE_target = self._parse_float(self.te_var.get())
-            Cn = self._parse_float(self.cn_var.get())
-            if not (0.0 < TE_target < 1.0):
+            te_hedefi = self._ondalik_coz(self.te_degiskeni.get())
+            cn_degeri = self._ondalik_coz(self.cn_degiskeni.get())
+            if not (0.0 < te_hedefi < 1.0):
                 raise ValueError("TE 0–1 aralığında olmalı.")
-            if Cn <= 0:
+            if cn_degeri <= 0:
                 raise ValueError("Cn pozitif olmalı.")
         except Exception as e:
-            self.te_entry.configure(background=self.style_bad)
+            self.te_girdisi.configure(background=self.stil_kotu)
             messagebox.showerror("Hata", f"Girdi hatası: {e}")
-            self.nb.tab(1, state="disabled")
+            self.defter.tab(1, state="disabled")
             return
 
         # Uygunluk (TE_target <= TE_max) kontrolü
-        i_at_max, te_max = find_te_max(Cn)
-        if TE_target > te_max + 1e-9:
-            self.te_entry.configure(background=self.style_bad)
-            self.info_lbl.config(
-                text=f"UYARI: Hedef TE={TE_target:.3f} > TEmax≈{te_max:.3f} (i≈{i_at_max:.3f}). "
+        patinaj_tepesinde, te_maksimumu = te_maksimumunu_bul(cn_degeri)
+        if te_hedefi > te_maksimumu + 1e-9:
+            self.te_girdisi.configure(background=self.stil_kotu)
+            self.bilgi_etiketi.config(
+                text=f"UYARI: Hedef TE={te_hedefi:.3f} > TEmax≈{te_maksimumu:.3f} (i≈{patinaj_tepesinde:.3f}). "
                 f"Bu Cn için hedef TE fiziksel olarak ulaşılamaz."
             )
-            self.nb.tab(1, state="disabled")
+            self.defter.tab(1, state="disabled")
             return
 
         # Her şey uygunsa 2. sayfayı aç ve grafiği hazırla
-        self.te_entry.configure(background=self.style_ok)
-        self.info_lbl.config(
-            text=f"Tamam: TEmax≈{te_max:.3f} (i≈{i_at_max:.3f}). "
+        self.te_girdisi.configure(background=self.stil_iyi)
+        self.bilgi_etiketi.config(
+            text=f"Tamam: TEmax≈{te_maksimumu:.3f} (i≈{patinaj_tepesinde:.3f}). "
             f"2. sayfadaki TE grafiği hazırlandı."
         )
-        self.nb.tab(1, state="normal")
-        self.nb.select(1)
-        self.draw_te_plot(Cn)
+        self.defter.tab(1, state="normal")
+        self.defter.select(1)
+        self.te_grafigi_ciz(cn_degeri)
 
     # ------------------ 2. Sayfa ------------------
-    def _build_page2(self):
-        pad = {"padx": 10, "pady": 6}
+    def _sayfa2_olustur(self):
+        bosluk = {"padx": 10, "pady": 6}
 
-        header = ttk.Frame(self.page2)
-        header.pack(fill="x")
+        ust_cerceve = ttk.Frame(self.sayfa2)
+        ust_cerceve.pack(fill="x")
 
         ttk.Label(
-            header,
+            ust_cerceve,
             text="TE(i) – Patinaj (i) Eğrileri (Cn+10, Cn, Cn−10, Cn−20). "
             "Seçilen Cn kalın çizilir. Y-ekseni 0–1 sabit."
-        ).pack(side="left", **pad)
+        ).pack(side="left", **bosluk)
 
         # Matplotlib Figure + Canvas
-        self.fig = Figure(figsize=(8.8, 4.8), dpi=100)
-        self.ax = self.fig.add_subplot(111)
+        self.sekil = Figure(figsize=(8.8, 4.8), dpi=100)
+        self.eksen = self.sekil.add_subplot(111)
 
-        canvas_frame = ttk.Frame(self.page2)
-        canvas_frame.pack(fill="both", expand=True, padx=10, pady=6)
+        tuval_cercevesi = ttk.Frame(self.sayfa2)
+        tuval_cercevesi.pack(fill="both", expand=True, padx=10, pady=6)
 
-        self.canvas = FigureCanvasTkAgg(self.fig, master=canvas_frame)
-        self.canvas_widget = self.canvas.get_tk_widget()
-        self.canvas_widget.pack(fill="both", expand=True)
+        self.tuval = FigureCanvasTkAgg(self.sekil, master=tuval_cercevesi)
+        self.tuval_arayuzu = self.tuval.get_tk_widget()
+        self.tuval_arayuzu.pack(fill="both", expand=True)
 
         # (İsteğe bağlı) Navigasyon araç çubuğu
-        self.toolbar = NavigationToolbar2Tk(self.canvas, canvas_frame, pack_toolbar=False)
-        self.toolbar.update()
-        self.toolbar.pack(side="bottom", fill="x")
+        self.arac_cubugu = NavigationToolbar2Tk(self.tuval, tuval_cercevesi, pack_toolbar=False)
+        self.arac_cubugu.update()
+        self.arac_cubugu.pack(side="bottom", fill="x")
 
         # Alt bilgi
-        bottom = ttk.Frame(self.page2)
-        bottom.pack(fill="x")
-        self.cn_echo = ttk.Label(bottom, text="Seçilen Cn: —")
-        self.cn_echo.pack(side="left", **pad)
+        alt_cerceve = ttk.Frame(self.sayfa2)
+        alt_cerceve.pack(fill="x")
+        self.cn_etiketi = ttk.Label(alt_cerceve, text="Seçilen Cn: —")
+        self.cn_etiketi.pack(side="left", **bosluk)
 
-        ttk.Button(bottom, text="Grafiği Yenile", command=self.on_replot).pack(side="left", **pad)
+        ttk.Button(alt_cerceve, text="Grafiği Yenile", command=self.yeniden_ciz).pack(side="left", **bosluk)
 
-        self.comment_lbl = ttk.Label(
-            self.page2,
+        self.yorum_etiketi = ttk.Label(
+            self.sayfa2,
             text="Grafik yorumları hesaplama yapıldığında burada görünecek.",
             justify="left",
             anchor="w",
             wraplength=860,
         )
-        self.comment_lbl.pack(fill="x", padx=12, pady=(4, 12))
+        self.yorum_etiketi.pack(fill="x", padx=12, pady=(4, 12))
 
-    def on_replot(self):
+    def yeniden_ciz(self):
         try:
-            Cn = self._parse_float(self.cn_var.get())
-            if Cn <= 0:
+            cn_degeri = self._ondalik_coz(self.cn_degiskeni.get())
+            if cn_degeri <= 0:
                 raise ValueError
         except Exception:
             messagebox.showerror("Hata", "Geçerli bir Cn değeri giriniz.")
             return
-        self.draw_te_plot(Cn)
+        self.te_grafigi_ciz(cn_degeri)
 
-    def draw_te_plot(self, Cn):
+    def te_grafigi_ciz(self, cn_degeri):
         """TE(i) eğrilerini gömülü tuvalde çizer. Y-ekseni 0..1."""
-        self.cn_echo.config(text=f"Seçilen Cn: {Cn:g}")
+        self.cn_etiketi.config(text=f"Seçilen Cn: {cn_degeri:g}")
 
         # Hazırla
-        self.ax.clear()
-        i_grid = np.linspace(0.0, 1.0, 800)
+        self.eksen.clear()
+        patinaj_izgarasi = np.linspace(0.0, 1.0, 800)
 
         # Cn listesi (≤0 olanları atla)
-        cn_list = [Cn + 10, Cn, Cn - 10, Cn - 20]
-        cn_list = [c for c in cn_list if c > 0]
+        cn_listesi = [cn_degeri + 10, cn_degeri, cn_degeri - 10, cn_degeri - 20]
+        cn_listesi = [cn_deger_satiri for cn_deger_satiri in cn_listesi if cn_deger_satiri > 0]
 
-        curve_maxima = {}
-        for c in cn_list:
-            y = np.array([TE_of(i, c) for i in i_grid])
-            imax, temax = find_te_max(c)
-            curve_maxima[c] = (imax, temax)
-            if abs(c - Cn) < 1e-9:
-                self.ax.plot(i_grid, y, linewidth=2.6, label=f"Cn = {c:g}")
+        egri_en_yuksekler = {}
+        for cn_satiri in cn_listesi:
+            te_egrisi_degerleri = np.array(
+                [te_degeri(patinaj_orani, cn_satiri) for patinaj_orani in patinaj_izgarasi]
+            )
+            patinaj_tepe_noktasi, te_tepe_noktasi = te_maksimumunu_bul(cn_satiri)
+            egri_en_yuksekler[cn_satiri] = (patinaj_tepe_noktasi, te_tepe_noktasi)
+            if abs(cn_satiri - cn_degeri) < 1e-9:
+                self.eksen.plot(
+                    patinaj_izgarasi, te_egrisi_degerleri, linewidth=2.6, label=f"Cn = {cn_satiri:g}"
+                )
                 # Etiket: tepe civarına yerleştir
-                self.ax.annotate(
-                    f"Cn={c:g}",
-                    xy=(imax, temax),
-                    xytext=(min(0.85, imax + 0.08), min(0.95, temax + 0.08)),
+                self.eksen.annotate(
+                    f"Cn={cn_satiri:g}",
+                    xy=(patinaj_tepe_noktasi, te_tepe_noktasi),
+                    xytext=(
+                        min(0.85, patinaj_tepe_noktasi + 0.08),
+                        min(0.95, te_tepe_noktasi + 0.08),
+                    ),
                     arrowprops=dict(arrowstyle="->", lw=1.0),
                 )
             else:
-                self.ax.plot(i_grid, y, linewidth=1.4, label=f"Cn = {c:g}")
+                self.eksen.plot(
+                    patinaj_izgarasi, te_egrisi_degerleri, linewidth=1.4, label=f"Cn = {cn_satiri:g}"
+                )
 
         # Eksenler ve sınırlar
-        self.ax.set_xlabel("Patinaj i")
-        self.ax.set_ylabel("TE")
-        self.ax.set_title("TE(i) – Patinaj (i) Eğrileri (Gömülü)")
-        self.ax.grid(True, alpha=0.3)
-        self.ax.set_xlim(0, 1.0)
-        self.ax.set_ylim(0.0, 1.0)  # İstenen: y ekseni 0..1 sabit
+        self.eksen.set_xlabel("Patinaj i")
+        self.eksen.set_ylabel("TE")
+        self.eksen.set_title("TE(i) – Patinaj (i) Eğrileri (Gömülü)")
+        self.eksen.grid(True, alpha=0.3)
+        self.eksen.set_xlim(0, 1.0)
+        self.eksen.set_ylim(0.0, 1.0)  # İstenen: y ekseni 0..1 sabit
 
-        self.ax.legend(loc="lower right")
-        self.fig.tight_layout()
-        self.canvas.draw()
+        self.eksen.legend(loc="lower right")
+        self.sekil.tight_layout()
+        self.tuval.draw()
 
-        comments = []
-        primary_i_max, primary_te_max = curve_maxima.get(Cn, (float("nan"), float("nan")))
-        if math.isfinite(primary_te_max):
-            comments.append(
-                f"• Seçilen Cn={Cn:g} için TEmax≈{primary_te_max:.3f} (i≈{primary_i_max:.3f})."
+        yorumlar = []
+        birincil_patinaj_maks, birincil_te_maks = egri_en_yuksekler.get(
+            cn_degeri, (float("nan"), float("nan"))
+        )
+        if math.isfinite(birincil_te_maks):
+            yorumlar.append(
+                f"• Seçilen Cn={cn_degeri:g} için TEmax≈{birincil_te_maks:.3f} (i≈{birincil_patinaj_maks:.3f})."
             )
 
-        low_slip = TE_of(0.1, Cn)
-        if math.isfinite(low_slip) and math.isfinite(primary_te_max):
-            delta_low = primary_te_max - low_slip
-            if delta_low > 0.05:
-                comments.append(
-                    f"• Düşük patinajda (i≈0.10) TE≈{low_slip:.3f}; optimuma göre {delta_low:.3f} birim artış potansiyeli bulunuyor."
+        dusuk_patinaj_te = te_degeri(0.1, cn_degeri)
+        if math.isfinite(dusuk_patinaj_te) and math.isfinite(birincil_te_maks):
+            delta_dusuk = birincil_te_maks - dusuk_patinaj_te
+            if delta_dusuk > 0.05:
+                yorumlar.append(
+                    f"• Düşük patinajda (i≈0.10) TE≈{dusuk_patinaj_te:.3f}; optimuma göre {delta_dusuk:.3f} birim artış potansiyeli bulunuyor."
                 )
             else:
-                comments.append(
-                    f"• i≈0.10 seviyesinde TE≈{low_slip:.3f}; eğri optimum değere çok yakın ilerliyor."
+                yorumlar.append(
+                    f"• i≈0.10 seviyesinde TE≈{dusuk_patinaj_te:.3f}; eğri optimum değere çok yakın ilerliyor."
                 )
 
-        high_slip = TE_of(0.6, Cn)
-        if math.isfinite(high_slip):
-            if high_slip < 0:
-                comments.append(
-                    f"• Yüksek patinajda (i≈0.60) TE≈{high_slip:.3f}; verim negatife düştüğü için enerji kaybı artıyor."
+        yuksek_patinaj_te = te_degeri(0.6, cn_degeri)
+        if math.isfinite(yuksek_patinaj_te):
+            if yuksek_patinaj_te < 0:
+                yorumlar.append(
+                    f"• Yüksek patinajda (i≈0.60) TE≈{yuksek_patinaj_te:.3f}; verim negatife düştüğü için enerji kaybı artıyor."
                 )
             else:
-                comments.append(
-                    f"• i≈0.60 civarında TE≈{high_slip:.3f}; optimumdan uzaklaştıkça verim hızla azalıyor."
+                yorumlar.append(
+                    f"• i≈0.60 civarında TE≈{yuksek_patinaj_te:.3f}; optimumdan uzaklaştıkça verim hızla azalıyor."
                 )
 
-        if len(curve_maxima) > 1:
-            best_c, (best_i, best_te) = max(curve_maxima.items(), key=lambda item: item[1][1])
-            if best_c != Cn:
-                comments.append(
-                    f"• Karşılaştırma: Cn={best_c:g} eğrisi TEmax≈{best_te:.3f} ile en yüksek verimi sunuyor (i≈{best_i:.3f})."
+        if len(egri_en_yuksekler) > 1:
+            en_iyi_cn, (en_iyi_patinaj, en_iyi_te) = max(
+                egri_en_yuksekler.items(), key=lambda item: item[1][1]
+            )
+            if en_iyi_cn != cn_degeri:
+                yorumlar.append(
+                    f"• Karşılaştırma: Cn={en_iyi_cn:g} eğrisi TEmax≈{en_iyi_te:.3f} ile en yüksek verimi sunuyor (i≈{en_iyi_patinaj:.3f})."
                 )
             else:
-                second = sorted(curve_maxima.items(), key=lambda item: item[1][1], reverse=True)[1]
-                comments.append(
-                    f"• Alternatif Cn={second[0]:g} için TEmax≈{second[1][1]:.3f}; seçilen Cn yine de daha avantajlı."
+                ikinci = sorted(
+                    egri_en_yuksekler.items(), key=lambda item: item[1][1], reverse=True
+                )[1]
+                yorumlar.append(
+                    f"• Alternatif Cn={ikinci[0]:g} için TEmax≈{ikinci[1][1]:.3f}; seçilen Cn yine de daha avantajlı."
                 )
 
-        if len(comments) < 2:
-            comments.append("• Grafik, Cn değerine bağlı TE değişimini kıyaslamaya yardımcı olur.")
+        if len(yorumlar) < 2:
+            yorumlar.append("• Grafik, Cn değerine bağlı TE değişimini kıyaslamaya yardımcı olur.")
 
-        self.comment_lbl.config(text="\n".join(comments))
+        self.yorum_etiketi.config(text="\n".join(yorumlar))
 
 
 # ------------------ Çalıştır ------------------
 
 if __name__ == "__main__":
-    App().mainloop()
+    Uygulama().mainloop()
