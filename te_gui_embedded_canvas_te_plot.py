@@ -95,56 +95,6 @@ class App(tk.Tk):
         self.calc_btn = ttk.Button(self.page1, text="Hesapla", command=self.on_calculate)
         self.calc_btn.grid(row=3, column=1, sticky="w", **pad)
 
-        # Kullanılan formüller ve semboller
-        formulas_frame = ttk.LabelFrame(self.page1, text="Kullanılan formüller ve semboller")
-        formulas_frame.grid(row=4, column=0, columnspan=3, sticky="nsew", padx=10, pady=(4, 10))
-
-        formulas_text = (
-            "Wismer ve Luth Eşitlikleri (1974)\n"
-            "\n"
-            "Tekerlek yuvarlanma direnci katsayısı:\n"
-            "  ρ = Fᵣ / W = 1.2 / Cₙ + 0.04\n"
-            "Tekerlek çevre kuvveti katsayısı:\n"
-            "  μ = Mₜ / (W·r) = 0.75 · (1 − e^(−0.3·Cₙ·i))\n"
-            "Tekerlek çekiş kuvveti (traksiyon) katsayısı:\n"
-            "  K = F_T / W = 0.75 · (1 − e^(−0.3·Cₙ·i)) · (1.2 / Cₙ + 0.04)\n"
-            "Tekerlek katsayısı:\n"
-            "  Cₙ = C_l · B · D / W\n"
-            "\n"
-            "Traktif verim (TE = çıktı / girdi):\n"
-            "  TE = (F_T / W) / (Mₜ / (W·r)) = (1 − i) · (1 − ρ / χ)\n"
-            "  χ = 0.75 · (1 − e^(−0.3·Cₙ·i)) (uygulamada μ = χ varsayılmıştır)\n"
-        )
-
-        ttk.Label(
-            formulas_frame,
-            text=formulas_text,
-            justify="left",
-            anchor="w",
-            wraplength=760,
-        ).pack(fill="x", padx=10, pady=(8, 4))
-
-        symbols_text = (
-            "Semboller:\n"
-            "  i : Patinaj oranı\n"
-            "  W : Tekerleğe etkiyen dikey yük\n"
-            "  Fᵣ : Yuvarlanma direnci kuvveti\n"
-            "  F_T : Çekiş kuvveti\n"
-            "  Mₜ : Tekerlek çevre momenti\n"
-            "  r : Tekerlek yarıçapı\n"
-            "  Cₙ : Zemin taşıma kapasitesi katsayısı\n"
-            "  C_l : Kaldırma katsayısı, B : Tekerlek genişliği, D : Tekerlek çapı\n"
-            "  ρ : Yuvarlanma direnci katsayısı, μ : Çevre kuvveti katsayısı, χ : TE hesabında kullanılan katsayı\n"
-        )
-
-        ttk.Label(
-            formulas_frame,
-            text=symbols_text,
-            justify="left",
-            anchor="w",
-            wraplength=760,
-        ).pack(fill="x", padx=10, pady=(0, 10))
-
         self.te_var.trace_add("write", lambda *_: self._reset_info())
         self.cn_var.trace_add("write", lambda *_: self._reset_info())
 
